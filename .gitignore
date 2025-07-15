@@ -1,0 +1,123 @@
+# Environment Variables
+*.env
+*.env.local
+*.env.development
+*.env.test
+*.env.production
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# JSON Files
+*.json
+package.json
+package-lock.json
+tsconfig.json
+vite.config.json
+tailwind.config.json
+
+# README Files
+README.md
+README.txt
+readme.md
+readme.txt
+DOCKER_SETUP.md
+API_DOCUMENTATION.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.env/
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Database Files
+*.db
+*.sqlite
+*.sqlite3
+
+# Log Files
+*.log
+logs/
+log/
+
+# ML Models and Data
+models/
+*.pkl
+*.joblib
+*.h5
+*.model
+
+# Docker
+.dockerignore
+
+# Cache Directories
+.cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build Outputs
+dist/
+build/
+*.tgz
+*.tar.gz
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+*.bak

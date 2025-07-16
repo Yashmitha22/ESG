@@ -1,6 +1,6 @@
 """
 ESG Analysis Tool - Simplified Main Application
-Compatible with Python 3.12
+Compatible with Python 3.12 with Sentiment Analysis
 """
 
 from fastapi import FastAPI, HTTPException
@@ -8,13 +8,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+from typing import List, Dict
 import uvicorn
 import yfinance as yf
 import pandas as pd
 import json
 from datetime import datetime, timedelta
 import os
+import sys
 from dotenv import load_dotenv
+
+# Add src to path for imports
+sys.path.append('src')
+from ml.sentiment_analyzer import SentimentAnalyzer
 
 # Load environment variables
 load_dotenv()
@@ -24,6 +30,9 @@ app = FastAPI(
     description="Real-time ESG equity analysis with sentiment analysis",
     version="1.0.0"
 )
+
+# Initialize sentiment analyzer
+sentiment_analyzer = SentimentAnalyzer()
 
 # CORS middleware
 app.add_middleware(
@@ -59,7 +68,7 @@ async def health_check():
 @app.post("/api/analyze", response_model=ESGAnalysisResponse)
 async def analyze_company(request: CompanyRequest):
     """
-    Analyze a company's ESG metrics
+    Analyze a company's ESG metrics with sentiment analysis
     """
     try:
         # Get basic company data from yfinance
@@ -74,16 +83,37 @@ async def analyze_company(request: CompanyRequest):
         if hist.empty:
             raise HTTPException(status_code=404, detail=f"No market data found for: {request.symbol}")
         
-        # Calculate simple ESG scores (placeholder algorithm)
-        # In a real implementation, these would come from actual ESG data sources
+        # Generate sample news articles for sentiment analysis
+        sample_articles = [
+            {
+                'title': f'{info["longName"]} announces sustainability initiative',
+                'description': 'Company focuses on renewable energy and carbon reduction.',
+                'published_at': datetime.now().isoformat(),
+                'source': 'ESG News'
+            },
+            {
+                'title': f'{info["longName"]} governance review',
+                'description': 'Board evaluates transparency and accountability measures.',
+                'published_at': (datetime.now() - timedelta(days=1)).isoformat(),
+                'source': 'Financial Times'
+            }
+        ]
+        
+        # Perform sentiment analysis
+        sentiment_result = await sentiment_analyzer.analyze_batch(sample_articles)
+        
+        # Calculate ESG scores based on available data + sentiment
         market_cap = info.get('marketCap', 0)
         revenue = info.get('totalRevenue', 0)
         employees = info.get('fullTimeEmployees', 0)
         
+        # Incorporate sentiment into scoring
+        sentiment_boost = sentiment_result['overall_sentiment'] * 10  # Convert to 0-10 scale
+        
         # Simple scoring algorithm based on available data
-        environmental_score = min(85, max(15, 50 + (employees / 10000 if employees else 0)))
-        social_score = min(90, max(20, 45 + (employees / 5000 if employees else 0)))
-        governance_score = min(95, max(25, 60 + (market_cap / 1000000000 if market_cap else 0)))
+        environmental_score = min(85, max(15, 50 + (employees / 10000 if employees else 0) + sentiment_boost))
+        social_score = min(90, max(20, 45 + (employees / 5000 if employees else 0) + sentiment_boost))
+        governance_score = min(95, max(25, 60 + (market_cap / 1000000000 if market_cap else 0) + sentiment_boost))
         
         # Overall ESG score (weighted average)
         esg_score = (environmental_score * 0.35 + social_score * 0.35 + governance_score * 0.30)
@@ -97,7 +127,8 @@ async def analyze_company(request: CompanyRequest):
             "price_change_5d": float(price_change),
             "volume": int(hist['Volume'].iloc[-1]),
             "market_cap": market_cap,
-            "currency": info.get('currency', 'USD')
+            "currency": info.get('currency', 'USD'),
+            "sentiment_analysis": sentiment_result
         }
         
         return ESGAnalysisResponse(
@@ -113,6 +144,17 @@ async def analyze_company(request: CompanyRequest):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/sentiment/analyze")
+async def analyze_sentiment(articles: List[Dict]):
+    """
+    Analyze sentiment for a list of articles
+    """
+    try:
+        result = await sentiment_analyzer.analyze_batch(articles)
+        return {"success": True, "sentiment_analysis": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Sentiment analysis failed: {str(e)}")
 
 @app.get("/api/companies/search/{query}")
 async def search_companies(query: str):

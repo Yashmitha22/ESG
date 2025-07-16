@@ -101,69 +101,55 @@ class SentimentAnalyzer:
         
         return text.strip()
     
-    def _aggregate_sentiments(self, sentiment_results: List[Dict], articles: List[Dict]) -> Dict[str, Any]:
-        """Aggregate individual sentiment results"""
+    def _analyze_esg_relevance(self, text: str) -> Dict[str, float]:
+        """Analyze ESG relevance of text"""
+        text_lower = text.lower()
+        esg_scores = {}
+        
+        for category, keywords in self.esg_keywords.items():
+            score = 0
+            for keyword in keywords:
+                score += text_lower.count(keyword)
+            
+            # Normalize score
+            esg_scores[category] = min(1.0, score / 5.0)  # Cap at 1.0
+        
+        return esg_scores
+    
+    def _aggregate_sentiments_simple(self, sentiment_results: List[Dict], articles: List[Dict]) -> Dict[str, Any]:
+        """Aggregate sentiment results using simple TextBlob analysis"""
         if not sentiment_results:
             return self._empty_sentiment_result()
         
         # Count sentiment labels
-        positive_count = 0
-        negative_count = 0
-        neutral_count = 0
+        positive_count = sum(1 for r in sentiment_results if r['sentiment_label'] == 'POSITIVE')
+        negative_count = sum(1 for r in sentiment_results if r['sentiment_label'] == 'NEGATIVE')
+        neutral_count = len(sentiment_results) - positive_count - negative_count
         
-        esg_scores = []
-        financial_scores = []
-        emotions = []
+        # Calculate average sentiment
+        polarities = [r['polarity'] for r in sentiment_results]
+        overall_sentiment = np.mean(polarities) if polarities else 0
         
+        # ESG relevance scores
+        esg_environmental = np.mean([r['esg_relevance']['Environmental'] for r in sentiment_results])
+        esg_social = np.mean([r['esg_relevance']['Social'] for r in sentiment_results])
+        esg_governance = np.mean([r['esg_relevance']['Governance'] for r in sentiment_results])
+        
+        # Create sentiment trend
         sentiment_trend = []
-        
-        for i, result in enumerate(sentiment_results):
-            article = articles[i] if i < len(articles) else {}
-            
-            # ESG sentiment processing
-            esg_sentiment = result.get('esg_sentiment', {})
-            esg_label = esg_sentiment.get('label', 'NEUTRAL').upper()
-            esg_score = esg_sentiment.get('score', 0.5)
-            
-            # Convert labels to standardized format
-            if 'POSITIVE' in esg_label or esg_label in ['4 stars', '5 stars']:
-                positive_count += 1
-                esg_scores.append(esg_score)
-            elif 'NEGATIVE' in esg_label or esg_label in ['1 star', '2 stars']:
-                negative_count += 1
-                esg_scores.append(-esg_score)
-            else:
-                neutral_count += 1
-                esg_scores.append(0)
-            
-            # Financial sentiment
-            financial_sentiment = result.get('financial_sentiment', {})
-            financial_score = financial_sentiment.get('score', 0.5)
-            financial_label = financial_sentiment.get('label', 'neutral').lower()
-            
-            if financial_label == 'positive':
-                financial_scores.append(financial_score)
-            elif financial_label == 'negative':
-                financial_scores.append(-financial_score)
-            else:
-                financial_scores.append(0)
-            
-            # Emotions
-            emotion = result.get('emotion', {})
-            emotions.append(emotion.get('label', 'neutral'))
-            
-            # Sentiment trend
+        for i, (result, article) in enumerate(zip(sentiment_results, articles)):
             sentiment_trend.append({
                 'date': article.get('published_at', datetime.now().isoformat()),
-                'sentiment': np.mean([esg_scores[-1], financial_scores[-1]]),
+                'sentiment': result['polarity'],
                 'title': article.get('title', ''),
-                'source': article.get('source', 'Unknown')
+                'source': article.get('source', 'Unknown'),
+                'esg_relevance': result['esg_relevance']
             })
         
-        # Calculate overall sentiment
-        overall_sentiment = np.mean(esg_scores + financial_scores) if (esg_scores + financial_scores) else 0
+        # Sort by date
+        sentiment_trend.sort(key=lambda x: x['date'], reverse=True)
         
-        # Identify key topics (simplified)
+        # Extract key topics
         key_topics = self._extract_key_topics(articles)
         
         return {
@@ -171,11 +157,16 @@ class SentimentAnalyzer:
             'positive_count': positive_count,
             'negative_count': negative_count,
             'neutral_count': neutral_count,
-            'sentiment_trend': sorted(sentiment_trend, key=lambda x: x['date'], reverse=True),
+            'sentiment_trend': sentiment_trend,
             'key_topics': key_topics,
-            'esg_sentiment_avg': round(np.mean(esg_scores) if esg_scores else 0, 3),
-            'financial_sentiment_avg': round(np.mean(financial_scores) if financial_scores else 0, 3),
-            'dominant_emotions': self._get_dominant_emotions(emotions),
+            'esg_sentiment_avg': round(overall_sentiment, 3),
+            'financial_sentiment_avg': round(overall_sentiment, 3),
+            'esg_relevance': {
+                'Environmental': round(esg_environmental, 3),
+                'Social': round(esg_social, 3),
+                'Governance': round(esg_governance, 3)
+            },
+            'dominant_emotions': ['neutral'],  # Simplified for now
             'total_articles': len(articles)
         }
     

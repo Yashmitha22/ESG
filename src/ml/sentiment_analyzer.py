@@ -204,9 +204,7 @@ class SentimentAnalyzer:
         return [emotion for emotion, count in sorted_emotions[:3]]
     
     def _fallback_sentiment_analysis(self, texts: List[str], articles: List[Dict]) -> Dict[str, Any]:
-        """Fallback sentiment analysis using basic methods"""
-        from textblob import TextBlob
-        
+        """Fallback sentiment analysis using basic TextBlob methods"""
         sentiments = []
         for text in texts:
             if text.strip():
@@ -241,6 +239,7 @@ class SentimentAnalyzer:
             'key_topics': self._extract_key_topics(articles),
             'esg_sentiment_avg': round(overall_sentiment, 3),
             'financial_sentiment_avg': round(overall_sentiment, 3),
+            'esg_relevance': {'Environmental': 0, 'Social': 0, 'Governance': 0},
             'dominant_emotions': ['neutral'],
             'total_articles': len(articles)
         }

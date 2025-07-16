@@ -25,7 +25,7 @@ class SentimentAnalyzer:
         pass
     
     async def analyze_batch(self, articles: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Analyze sentiment for a batch of articles"""
+        """Analyze sentiment for a batch of articles using TextBlob"""
         if not articles:
             return self._empty_sentiment_result()
         
@@ -35,27 +35,49 @@ class SentimentAnalyzer:
             text = f"{article.get('title', '')} {article.get('description', '')}"
             texts.append(self._preprocess_text(text))
         
-        # Run sentiment analysis
+        # Run sentiment analysis using TextBlob
         sentiment_results = []
-        esg_scores = []
-        emotions = []
         
         try:
-            # ESG sentiment analysis
             for text in texts:
                 if text.strip():
-                    esg_result = self.esg_sentiment_pipeline(text[:512])  # Limit token length
-                    financial_result = self.financial_sentiment_pipeline(text[:512])
-                    emotion_result = self.emotion_pipeline(text[:512])
+                    # TextBlob sentiment analysis
+                    blob = TextBlob(text)
+                    polarity = blob.sentiment.polarity  # -1 to 1
+                    subjectivity = blob.sentiment.subjectivity  # 0 to 1
+                    
+                    # Convert polarity to positive/negative/neutral
+                    if polarity > 0.1:
+                        sentiment_label = 'POSITIVE'
+                        score = polarity
+                    elif polarity < -0.1:
+                        sentiment_label = 'NEGATIVE'
+                        score = abs(polarity)
+                    else:
+                        sentiment_label = 'NEUTRAL'
+                        score = 0.5
+                    
+                    # Analyze ESG relevance
+                    esg_relevance = self._analyze_esg_relevance(text)
                     
                     sentiment_results.append({
-                        'esg_sentiment': esg_result[0] if esg_result else {'label': 'NEUTRAL', 'score': 0.5},
-                        'financial_sentiment': financial_result[0] if financial_result else {'label': 'neutral', 'score': 0.5},
-                        'emotion': emotion_result[0] if emotion_result else {'label': 'neutral', 'score': 0.5}
+                        'sentiment_label': sentiment_label,
+                        'sentiment_score': score,
+                        'polarity': polarity,
+                        'subjectivity': subjectivity,
+                        'esg_relevance': esg_relevance
+                    })
+                else:
+                    sentiment_results.append({
+                        'sentiment_label': 'NEUTRAL',
+                        'sentiment_score': 0.5,
+                        'polarity': 0,
+                        'subjectivity': 0,
+                        'esg_relevance': {'Environmental': 0, 'Social': 0, 'Governance': 0}
                     })
             
             # Calculate aggregated scores
-            aggregated_results = self._aggregate_sentiments(sentiment_results, articles)
+            aggregated_results = self._aggregate_sentiments_simple(sentiment_results, articles)
             
             return aggregated_results
             

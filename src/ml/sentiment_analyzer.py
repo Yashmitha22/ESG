@@ -1,59 +1,28 @@
 """
-Sentiment analysis using HuggingFace transformers
+Sentiment analysis for ESG content - Python 3.12 Compatible
 """
 
 import asyncio
-from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
 from typing import List, Dict, Any
-import torch
 import numpy as np
 from datetime import datetime
 import re
+from textblob import TextBlob
 
 class SentimentAnalyzer:
-    """Advanced sentiment analysis for ESG-related content"""
+    """Advanced sentiment analysis for ESG-related content using TextBlob"""
     
     def __init__(self):
-        self.device = 0 if torch.cuda.is_available() else -1
-        self.esg_sentiment_pipeline = None
-        self.financial_sentiment_pipeline = None
-        self.emotion_pipeline = None
-        self._initialize_models()
+        self.esg_keywords = {
+            'Environmental': ['climate', 'carbon', 'renewable', 'sustainability', 'green', 'emissions', 'environment', 'pollution', 'waste', 'energy'],
+            'Social': ['diversity', 'employees', 'community', 'safety', 'human rights', 'social', 'workplace', 'labor', 'diversity', 'inclusion'],
+            'Governance': ['board', 'ethics', 'compliance', 'transparency', 'governance', 'leadership', 'audit', 'corruption', 'accountability']
+        }
+        print("Simple sentiment analyzer initialized successfully!")
     
     def _initialize_models(self):
-        """Initialize HuggingFace models for sentiment analysis"""
-        try:
-            # ESG-specific sentiment analysis
-            self.esg_sentiment_pipeline = pipeline(
-                "sentiment-analysis",
-                model="nlptown/bert-base-multilingual-uncased-sentiment",
-                device=self.device
-            )
-            
-            # Financial sentiment analysis
-            self.financial_sentiment_pipeline = pipeline(
-                "sentiment-analysis",
-                model="ProsusAI/finbert",
-                device=self.device
-            )
-            
-            # Emotion analysis
-            self.emotion_pipeline = pipeline(
-                "text-classification",
-                model="j-hartmann/emotion-english-distilroberta-base",
-                device=self.device
-            )
-            
-            print("Sentiment analysis models loaded successfully!")
-            
-        except Exception as e:
-            print(f"Error loading models: {e}")
-            # Fallback to basic sentiment analysis
-            self.esg_sentiment_pipeline = pipeline(
-                "sentiment-analysis",
-                model="cardiffnlp/twitter-roberta-base-sentiment-latest",
-                device=self.device
-            )
+        """Dummy method for compatibility"""
+        pass
     
     async def analyze_batch(self, articles: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze sentiment for a batch of articles"""
